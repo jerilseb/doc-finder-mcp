@@ -1,10 +1,3 @@
-# /// script
-# requires-python = ">=3.13"
-# dependencies = [
-#     "mcp",
-#     "httpx",
-# ]
-# ///
 import os
 import base64
 import asyncio
