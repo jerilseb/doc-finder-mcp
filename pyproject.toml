@@ -9,4 +9,4 @@ dependencies = [
 ]
 
 [project.scripts]
-doc-finder = "doc_finder.main:main"
+doc_finder = "doc_finder.main:main"
