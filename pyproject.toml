@@ -1,0 +1,9 @@
+[project]
+name = "doc-finder"
+version = "0.1.0"
+description = "Doc Finder MCP Server"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp",
+    "httpx"
+]
