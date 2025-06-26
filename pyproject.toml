@@ -7,3 +7,6 @@ dependencies = [
     "mcp",
     "httpx"
 ]
+
+[project.scripts]
+doc-finder = "doc-finder.main:main"
