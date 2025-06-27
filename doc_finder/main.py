@@ -12,26 +12,31 @@ mcp = FastMCP("DocFinder")
 
 # GitHub configuration
 GITHUB_PAT = os.environ.get("GITHUB_PAT")
-GITHUB_REPO = "jerilseb/my-docs"
+DOCS_REPO = os.environ.get("DOCS_REPO")
+
+# Validate required environment variables
+if not DOCS_REPO:
+    raise ValueError("DOCS_REPO environment variable is required")
+
 GITHUB_API_BASE = "https://api.github.com"
 
 
 def _get_github_headers() -> dict:
     """Get headers for GitHub API requests."""
-    if not GITHUB_PAT:
-        raise ValueError("GITHUB_PAT environment variable is required")
-    return {
-        "Authorization": f"token {GITHUB_PAT}",
+    headers = {
         "Accept": "application/vnd.github.v3+json",
         "User-Agent": "DocFinder-MCP",
     }
+    if GITHUB_PAT:
+        headers["Authorization"] = f"token {GITHUB_PAT}"
+    return headers
 
 
 async def _get_all_markdown_files(directory) -> List[str]:
     """Get all markdown files from GitHub repository directory."""
     try:
         headers = _get_github_headers()
-        url = f"{GITHUB_API_BASE}/repos/{GITHUB_REPO}/contents/{directory}"
+        url = f"{GITHUB_API_BASE}/repos/{DOCS_REPO}/contents/{directory}"
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers)
@@ -55,7 +60,7 @@ async def _get_file_content_from_github(
     """Get the content of a specific file from GitHub repository."""
     try:
         headers = _get_github_headers()
-        url = f"{GITHUB_API_BASE}/repos/{GITHUB_REPO}/contents/{filepath}"
+        url = f"{GITHUB_API_BASE}/repos/{DOCS_REPO}/contents/{filepath}"
 
         response = await client.get(url, headers=headers)
         response.raise_for_status()
