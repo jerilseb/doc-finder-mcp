@@ -1,6 +1,7 @@
 import os
 import base64
 import asyncio
+from pathlib import Path
 from typing import List, Optional
 
 import httpx
@@ -10,13 +11,20 @@ from mcp.server.fastmcp.prompts import base
 # Initialize the MCP server
 mcp = FastMCP("DocFinder")
 
-# GitHub configuration
+# Configuration
 GITHUB_PAT = os.environ.get("GITHUB_PAT")
 DOCS_REPO = os.environ.get("DOCS_REPO")
+DOCS_FOLDER = os.environ.get("DOCS_FOLDER")
 
-# Validate required environment variables
-if not DOCS_REPO:
-    raise ValueError("DOCS_REPO environment variable is required")
+# Validate that at least one source is configured
+if not DOCS_REPO and not DOCS_FOLDER:
+    raise ValueError("Either DOCS_REPO or DOCS_FOLDER environment variable is required")
+
+# Validate DOCS_FOLDER exists if provided
+if DOCS_FOLDER and not Path(DOCS_FOLDER).is_dir():
+    raise ValueError(f"DOCS_FOLDER path does not exist or is not a directory: {DOCS_FOLDER}")
+
+USE_LOCAL_DOCS = bool(DOCS_FOLDER)
 
 GITHUB_API_BASE = "https://api.github.com"
 
@@ -32,7 +40,26 @@ def _get_github_headers() -> dict:
     return headers
 
 
-async def _get_all_markdown_files(directory) -> List[str]:
+async def _get_all_markdown_files_local(directory: str) -> List[str]:
+    """Get all markdown files from local directory."""
+    try:
+        base_path = Path(DOCS_FOLDER)
+        dir_path = base_path / directory
+        
+        if not dir_path.exists() or not dir_path.is_dir():
+            return []
+        
+        markdown_files = []
+        for file_path in dir_path.glob("*.md"):
+            relative_path = f"{directory}/{file_path.name}"
+            markdown_files.append(relative_path)
+        
+        return markdown_files
+    except Exception:
+        return []
+
+
+async def _get_all_markdown_files_github(directory: str) -> List[str]:
     """Get all markdown files from GitHub repository directory."""
     try:
         headers = _get_github_headers()
@@ -52,6 +79,29 @@ async def _get_all_markdown_files(directory) -> List[str]:
         return markdown_files
     except Exception:
         return []
+
+
+async def _get_all_markdown_files(directory: str) -> List[str]:
+    """Get all markdown files from configured source (local or GitHub)."""
+    if USE_LOCAL_DOCS:
+        return await _get_all_markdown_files_local(directory)
+    else:
+        return await _get_all_markdown_files_github(directory)
+
+
+async def _get_file_content_from_local(filepath: str) -> Optional[str]:
+    """Get the content of a specific file from local filesystem."""
+    try:
+        base_path = Path(DOCS_FOLDER)
+        file_path = base_path / filepath
+        
+        if not file_path.exists() or not file_path.is_file():
+            return None
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception:
+        return None
 
 
 async def _get_file_content_from_github(
@@ -75,6 +125,15 @@ async def _get_file_content_from_github(
         return None
 
 
+async def _get_file_content(filepath: str) -> Optional[str]:
+    """Get the content of a specific file from configured source (local or GitHub)."""
+    if USE_LOCAL_DOCS:
+        return await _get_file_content_from_local(filepath)
+    else:
+        async with httpx.AsyncClient() as client:
+            return await _get_file_content_from_github(client, filepath)
+
+
 @mcp.tool()
 async def get_file_contents(filenames: List[str]) -> str:
     """
@@ -88,16 +147,13 @@ async def get_file_contents(filenames: List[str]) -> str:
     """
     contents = []
 
-    async with httpx.AsyncClient() as client:
-        # Fetch all files in parallel
-        tasks = [
-            _get_file_content_from_github(client, filename) for filename in filenames
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+    # Fetch all files in parallel
+    tasks = [_get_file_content(filename) for filename in filenames]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for filename, content in zip(filenames, results):
-            if isinstance(content, str) and content:
-                contents.append(f"# File: {filename}\n\n{content}\n\n---")
+    for filename, content in zip(filenames, results):
+        if isinstance(content, str) and content:
+            contents.append(f"# File: {filename}\n\n{content}\n\n---")
 
     return "\n\n".join(contents)
 

@@ -1,6 +1,6 @@
 # Doc Finder MCP Server
 
-A Model Context Protocol server that allows you fetch documentation or coding guidelines stored in a github repository, on demand.
+A Model Context Protocol server that allows you to fetch documentation or coding guidelines stored in a GitHub repository or local filesystem, on demand.
 
 
 ## Installation
@@ -11,11 +11,15 @@ Install [uv](https://github.com/astral-sh/uv) is a fast Python package installer
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-#### In your MCP client configuration:
+## Configuration
 
-The `uvx` command is provided by uv and allows you to run Python packages directly:
+The `uvx` command is provided by uv and allows you to run Python packages directly.
 
-If the documentation is stored in a public repo,
+You can configure the server to read from either a GitHub repository or a local filesystem directory.
+
+### GitHub Repository (Public)
+
+If the documentation is stored in a public GitHub repository:
 
 ```json
 "mcpServers": {
@@ -29,7 +33,9 @@ If the documentation is stored in a public repo,
 }
 ```
 
-If the documentation is stored in a private repo,
+### GitHub Repository (Private)
+
+If the documentation is stored in a private GitHub repository:
 
 
 ```json
@@ -45,7 +51,25 @@ If the documentation is stored in a private repo,
 }
 ```
 
-The DOCS_REPO should contain 2 top level directores - `documentation` and `guidelines`. For example
+### Local Filesystem
+
+If you want to read documentation from a local directory instead of GitHub:
+
+```json
+"mcpServers": {
+    "doc-finder": {
+      "command": "uvx",
+      "args": ["git+https://github.com/jerilseb/doc-finder-mcp"],
+      "env": {
+        "DOCS_FOLDER": "/path/to/your/docs"
+      }
+    },
+}
+```
+
+## Directory Structure
+
+Whether using GitHub or local filesystem, the documentation should be organized with 2 top level directories - `documentation` and `guidelines`. For example:
 
 ```
 ├── documentation
