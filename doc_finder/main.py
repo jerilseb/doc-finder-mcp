@@ -161,10 +161,10 @@ async def get_file_contents(filenames: List[str]) -> str:
 @mcp.tool()
 async def list_all_development_guidelines() -> str:
     """
-    List all available development/coding guidelines files.
+    List all available development or coding guidelines files.
 
     Returns:
-        A list of all development/coding guidelines files
+        A list of all development or coding guidelines files
     """
     markdown_files = await _get_all_markdown_files("guidelines")
     if not markdown_files:
